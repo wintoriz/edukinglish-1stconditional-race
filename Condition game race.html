@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edukinglish - First Conditional Board Race & Trivia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Inter:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Fredoka', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #311042 100%);
+            min-height: 100vh;
+            user-select: none;
+        }
+
+        .board-tile {
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .player-token {
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+        }
+
+        @keyframes dice-shake {
+            0% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(-18deg) scale(1.15); }
+            50% { transform: rotate(18deg) scale(1.15); }
+            75% { transform: rotate(-12deg) scale(1.1); }
+            100% { transform: rotate(0deg) scale(1); }
+        }
+        .rolling {
+            animation: dice-shake 0.45s ease-in-out infinite;
+        }
+
+        #confetti-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-2 sm:p-5 text-gray-800">
+
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- Main Game Container -->
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden border-4 border-amber-400 flex flex-col min-h-[680px] relative">
+        
+        <!-- Top Header -->
+        <header class="bg-gradient-to-r from-indigo-900 via-purple-800 to-rose-700 p-4 sm:p-5 text-white flex flex-col sm:flex-row items-center justify-between gap-2 border-b-4 border-amber-400">
+            <div class="flex items-center space-x-2">
+                <span class="text-3xl sm:text-4xl">🎲</span>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-wide leading-none">Edukinglish <span class="text-amber-300">Conditional Race</span></h1>
+                    <p class="text-xs text-purple-200 font-semibold mt-0.5">First Conditional (Affirmative • Negative • Questions) + Reading Trivia</p>
+                </div>
+            </div>
+            
+            <!-- Live HUD -->
+            <div id="hud-bar" class="hidden flex items-center space-x-3 bg-black/30 px-4 py-1.5 rounded-full border border-white/20 text-xs sm:text-sm font-bold">
+                <span class="text-amber-300">🎯 Turn: <span id="hud-turn-name">Player 1</span></span>
+                <span class="text-white/40">|</span>
+                <span class="text-emerald-300">🏁 Leader: Tile <span id="hud-leader">0</span>/24</span>
+            </div>
+        </header>
+
+        <!-- Viewport -->
+        <main class="p-4 sm:p-6 flex-grow flex flex-col justify-between">
+
+            <!-- ================= START SCREEN ================= -->
+            <div id="screen-start" class="text-center py-3 flex flex-col items-center justify-center flex-grow">
+                <div class="text-5xl sm:text-6xl mb-2 animate-bounce">🏎️💨</div>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-indigo-950 mb-1">First Conditional Grand Prix!</h2>
+                <p class="text-gray-600 text-xs sm:text-sm max-w-xl mb-4">
+                    Play solo or compete with up to <b>4 players taking turns</b>! Roll the dice, answer Reading Trivia & First Conditional challenges, and reach Tile #24 first!
+                </p>
+
+                <!-- Challenge Categories Preview -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full max-w-3xl mb-4 text-left">
+                    <div class="bg-blue-50 border-2 border-blue-200 p-2.5 rounded-2xl">
+                        <div class="text-xl mb-0.5">📖</div>
+                        <h3 class="font-bold text-blue-900 text-xs">Reading & Trivia</h3>
+                        <p class="text-[11px] text-gray-600">10 passages & trivia prompts.</p>
+                    </div>
+                    <div class="bg-emerald-50 border-2 border-emerald-200 p-2.5 rounded-2xl">
+                        <div class="text-xl mb-0.5">➕</div>
+                        <h3 class="font-bold text-emerald-900 text-xs">10 Affirmative</h3>
+                        <p class="text-[11px] text-gray-600">If + Present, will + verb.</p>
+                    </div>
+                    <div class="bg-rose-50 border-2 border-rose-200 p-2.5 rounded-2xl">
+                        <div class="text-xl mb-0.5">➖</div>
+                        <h3 class="font-bold text-rose-900 text-xs">10 Negative</h3>
+                        <p class="text-[11px] text-gray-600">Using don't/doesn't & won't.</p>
+                    </div>
+                    <div class="bg-amber-50 border-2 border-amber-200 p-2.5 rounded-2xl">
+                        <div class="text-xl mb-0.5">❓</div>
+                        <h3 class="font-bold text-amber-900 text-xs">10 Questions</h3>
+                        <p class="text-[11px] text-gray-600">What will you do if...?</p>
+                    </div>
+                </div>
+
+                <!-- Multiplayer Setup Box -->
+                <div class="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 w-full max-w-2xl mb-5">
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-2 mb-3">
+                        <span class="text-xs font-extrabold uppercase text-indigo-900">👥 Number of Players / Jugadores:</span>
+                        <div class="flex gap-2" id="player-count-btns">
+                            <button onclick="setPlayerCount(1)" class="pcount-btn px-3.5 py-1.5 rounded-xl text-xs font-extrabold border-2 border-indigo-600 bg-indigo-600 text-white">1 Player</button>
+                            <button onclick="setPlayerCount(2)" class="pcount-btn px-3.5 py-1.5 rounded-xl text-xs font-extrabold border-2 border-indigo-200 bg-white text-indigo-900 hover:border-indigo-400">2 Players</button>
+                            <button onclick="setPlayerCount(3)" class="pcount-btn px-3.5 py-1.5 rounded-xl text-xs font-extrabold border-2 border-indigo-200 bg-white text-indigo-900 hover:border-indigo-400">3 Players</button>
+                            <button onclick="setPlayerCount(4)" class="pcount-btn px-3.5 py-1.5 rounded-xl text-xs font-extrabold border-2 border-indigo-200 bg-white text-indigo-900 hover:border-indigo-400">4 Players</button>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Player Name & Avatar Inputs -->
+                    <div id="players-setup-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-left">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <button onclick="startRace()" class="bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-indigo-950 font-extrabold text-lg sm:text-xl px-10 py-3.5 rounded-full shadow-xl transform transition hover:scale-105 active:scale-95 border-b-4 border-amber-600">
+                    START RACE 🎲
+                </button>
+            </div>
+
+            <!-- ================= BOARD RACE SCREEN ================= -->
+            <div id="screen-board" class="hidden flex-col flex-grow justify-between gap-3">
+                
+                <!-- Scoreboard Strip for All Active Players -->
+                <div id="players-scoreboard" class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <!-- Player cards rendered dynamically -->
+                </div>
+
+                <!-- Top Control Bar: Dice & Active Turn -->
+                <div class="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div class="flex items-center space-x-3">
+                        <div id="dice-box" class="w-14 h-14 sm:w-16 sm:h-16 bg-white border-4 border-indigo-600 rounded-2xl flex items-center justify-center text-3xl sm:text-4xl font-extrabold text-indigo-950 shadow-md">
+                            🎲
+                        </div>
+                        <div>
+                            <h3 id="turn-status" class="font-extrabold text-indigo-950 text-base sm:text-lg">🚀 Player 1's Turn!</h3>
+                            <p id="turn-substatus" class="text-xs text-gray-600">Click "Roll Dice" to advance on the track.</p>
+                        </div>
+                    </div>
+
+                    <button id="roll-btn" onclick="rollDice()" class="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-extrabold text-base sm:text-lg px-7 py-3.5 rounded-2xl shadow-lg transform transition hover:scale-105 active:scale-95 border-b-4 border-indigo-900">
+                        🎲 ROLL DICE
+                    </button>
+                </div>
+
+                <!-- 24-Tile Race Track Grid -->
+                <div class="bg-slate-900 p-3 sm:p-4 rounded-3xl shadow-inner border-4 border-slate-700">
+                    <div id="race-board" class="grid grid-cols-4 sm:grid-cols-6 gap-2 sm:gap-2.5">
+                        <!-- 25 Tiles (Start 0 + Tiles 1..24) generated via JS -->
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="flex flex-wrap justify-center gap-3 text-[11px] sm:text-xs font-bold text-gray-600">
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Reading Trivia</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> Affirmative (+)</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span> Negative (-)</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> Question (?)</span>
+                </div>
+            </div>
+
+            <!-- ================= QUESTION CHALLENGE MODAL ================= -->
+            <div id="challenge-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-40 flex items-center justify-center p-3 sm:p-6">
+                <div class="bg-white rounded-3xl border-4 border-amber-400 shadow-2xl w-full max-w-2xl overflow-hidden animate-[fadeIn_0.2s_ease-out]">
+                    
+                    <!-- Modal Header -->
+                    <div id="modal-header" class="bg-indigo-800 text-white p-4 flex items-center justify-between">
+                        <span id="modal-category-badge" class="px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-white/20">
+                            Category
+                        </span>
+                        <span id="modal-tile-info" class="text-xs font-bold text-amber-300">
+                            Target: Tile #4
+                        </span>
+                    </div>
+
+                    <!-- Modal Body -->
+                    <div class="p-5 sm:p-7">
+                        <!-- Reading Passage Box (Only for Reading/Trivia tiles) -->
+                        <div id="modal-reading-box" class="hidden bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 mb-4">
+                            <p class="text-[11px] font-extrabold uppercase text-blue-700 mb-1">📖 Read Carefully / Lee con atención:</p>
+                            <p id="modal-reading-text" class="text-xs sm:text-sm text-gray-800 leading-relaxed font-medium"></p>
+                        </div>
+
+                        <!-- Question Prompt -->
+                        <h3 id="modal-question" class="text-base sm:text-xl font-bold text-gray-900 mb-4 leading-snug">
+                            Question prompt...
+                        </h3>
+
+                        <!-- Answer Options -->
+                        <div id="modal-options" class="grid grid-cols-1 gap-2.5 sm:gap-3">
+                            <!-- Buttons generated via JS -->
+                        </div>
+
+                        <!-- Immediate Feedback Banner -->
+                        <div id="modal-feedback" class="hidden mt-4 p-3.5 rounded-2xl text-center text-xs sm:text-sm font-bold"></div>
+
+                        <!-- Continue Button -->
+                        <div id="modal-continue-wrap" class="hidden mt-4 text-center">
+                            <button onclick="closeChallengeModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold px-8 py-3 rounded-xl shadow transition">
+                                Continue Race ➡️
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= VICTORY SCREEN ================= -->
+            <div id="screen-victory" class="hidden text-center py-3 flex-col justify-between flex-grow">
+                <div>
+                    <div class="text-6xl mb-2 animate-bounce">🏆</div>
+                    <h2 id="vic-winner-title" class="text-2xl sm:text-4xl font-extrabold text-indigo-950">PLAYER 1 WINS THE RACE!</h2>
+                    <p class="text-xs sm:text-sm text-gray-500 mb-4">First Conditional & Reading Trivia Grand Prix Standings</p>
+
+                    <!-- Final Standings Podium -->
+                    <div id="vic-standings" class="max-w-lg mx-auto space-y-2 mb-5 text-left">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row justify-center gap-3">
+                    <button onclick="sendRaceWhatsApp()" class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-sm shadow-md transition flex items-center justify-center space-x-2">
+                        <span>📲 Send Race Results to WhatsApp</span>
+                    </button>
+                    <button onclick="location.reload()" class="px-6 py-3 bg-amber-400 hover:bg-amber-300 text-indigo-950 rounded-xl font-bold text-sm shadow transition border-b-2 border-amber-600">
+                        🔄 Play New Race
+                    </button>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-gray-100 p-2.5 text-center text-xs text-gray-500 border-t border-gray-200">
+            Edukinglish Speaking Hub © First Conditional Board Race & Reading Trivia
+        </footer>
+    </div>
+
+    <!-- JavaScript Game Engine -->
+    <script>
+        // ==================== SOUND EFFECTS (WEB AUDIO API) ====================
+        let audioCtx = null;
+        function playSFX(type) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+                if (type === 'dice') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(320, now);
+                    osc.frequency.exponentialRampToValueAtTime(640, now + 0.06);
+                    gain.gain.setValueAtTime(0.06, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+                    osc.start(now);
+                    osc.stop(now + 0.06);
+                } else if (type === 'success') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.08);
+                    osc.frequency.setValueAtTime(783.99, now + 0.16);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'error') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(190, now);
+                    osc.frequency.linearRampToValueAtTime(110, now + 0.22);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+                    osc.start(now);
+                    osc.stop(now + 0.22);
+                }
+            } catch (e) {}
+        }
+
+        // ==================== 40-QUESTION BANK ====================
+        // 10 Reading/Trivia + 10 Affirmative + 10 Negative + 10 Interrogative
+        const questionBank = [
+            // --- 10 READING & TRIVIA QUESTIONS ---
+            {
+                cat: "reading",
+                badge: "📖 Reading Trivia",
+                reading: "Maya wants to buy a new electric scooter. If she saves $20 every week, she will have enough money in three months. However, if she buys video games every weekend, she won't reach her goal on time.",
+                question: "What will happen if Maya saves $20 every week?",
+                options: [
+                    "She will have enough money in 3 months.",
+                    "She won't buy the electric scooter.",
+                    "She will spend all her money on games.",
+                    "She will buy a bicycle tomorrow."
+                ],
+                answer: "She will have enough money in 3 months."
+            },
+            {
+                cat: "reading",
+                badge: "📖 Reading Trivia",
+                reading: "Scientists warn about ocean plastic. If people continue throwing plastic into the sea, many marine animals will lose their habitats. On the other hand, if communities recycle more, the oceans will become cleaner.",
+                question: "According to the text, what is the result if communities recycle more?",
+                options: [
+                    "The oceans will become cleaner.",
+                    "Marine animals will lose their homes.",
+                    "More plastic will enter the sea.",
+                    "Scientists will stop studying oceans."
+                ],
+                answer: "The oceans will become cleaner."
+            },
+            {
+                cat: "reading",
+                badge: "📖 Reading Trivia",
+                reading: "Liam has a big science presentation tomorrow morning. If he goes to bed early tonight, he will feel energetic and confident. If he stays up late watching movies, he will feel tired during class.",
+                question: "Why should Liam go to bed early tonight?",
+                options: [
+                    "Because he will feel energetic and confident tomorrow.",
+                    "Because his presentation was cancelled.",
+                    "Because he wants to watch movies at night.",
+                    "Because he already finished school."
+                ],
+                answer: "Because he will feel energetic and confident tomorrow."
+            },
+            {
+                cat: "reading",
+                badge: "📖 Reading Trivia",
+                reading: "Trivia Fact: Plants need sunlight and water for photosynthesis. If you keep a green plant inside a dark closet for two weeks without light, its leaves will turn yellow and weak.",
+                question: "What will happen to a plant kept in a dark closet for two weeks?",
+                options: [
+                    "Its leaves will turn yellow and weak.",
+                    "It will grow giant colorful flowers.",
+                    "It will produce extra oxygen.",
+                    "Nothing will change at all."
+                ],
+                answer: "Its leaves will turn yellow and weak."
+            },
+            {
+                cat: "reading",
+                badge: "📖 Reading Trivia",
+                reading: "Sofia is planning a picnic at Cholula Park on Saturday. The weather forecast says there is a 70% chance of rain. 'If it rains on Saturday, we will move the picnic to my living room,' Sofia told her friends.",
+                question: "What is Sofia's backup plan if it rains?",
+                options: [
+                    "They will have the picnic in her living room.",
+                    "They will cancel the party completely.",
+                    "They will go swimming in the rain.",
+                    "They will meet on Sunday morning."
+                ],
+                answer: "They will have the picnic in her living room."
+            },
+            {
+                cat: "reading",
+                badge: "📖 Reading Trivia",
+                reading: "Tech Trivia: Smartphone batteries degrade faster in extreme heat. If you leave your phone inside a hot car under the summer sun, the battery will overheat and lose capacity.",
+                question: "What happens if you leave your phone in a hot car?",
+                options: [
+                    "The battery will overheat and lose capacity.",
+                    "The phone will charge twice as fast.",
+                    "The screen will freeze permanently.",
+                    "The internet speed will double."
+                ],
+                answer: "The battery will overheat and lose capacity."
+            },
+            {
+                cat: "reading",
+                badge: "📖 Reading Trivia",
+                reading: "Carlos is learning English at Edukinglish Speaking Hub. His teacher says: 'If you practice speaking for 15 minutes every day, your fluency will improve dramatically in just a few weeks!'",
+                question: "How can Carlos improve his fluency dramatically?",
+                options: [
+                    "By practicing speaking for 15 minutes daily.",
+                    "By only reading once a month.",
+                    "By memorizing dictionaries without speaking.",
+                    "By skipping his English classes."
+                ],
+                answer: "By practicing speaking for 15 minutes daily."
+            },
+            {
+                cat: "reading",
+                badge: "📖 Reading Trivia",
+                reading: "Travel Guide: Flights to Madrid are much cheaper in November. If tourists book their tickets three months in advance, they will save up to 40% on airfare.",
+                question: "How much will tourists save if they book 3 months early?",
+                options: [
+                    "Up to 40% on airfare.",
+                    "Exactly 100% (free flights).",
+                    "Only 5% on hotel rooms.",
+                    "Nothing, prices never change."
+                ],
+                answer: "Up to 40% on airfare."
+            },
+            {
+                cat: "reading",
+                badge: "📖 Reading Trivia",
+                reading: "Healthy Habits: Sugar gives quick energy, but too much is harmful. If children eat too many candies before dinner, they won't feel hungry for healthy vegetables and protein.",
+                question: "What happens if children eat too many candies before dinner?",
+                options: [
+                    "They won't feel hungry for healthy food.",
+                    "They will eat double vegetables.",
+                    "They will fall asleep immediately.",
+                    "They will become stronger athletes."
+                ],
+                answer: "They won't feel hungry for healthy food."
+            },
+            {
+                cat: "reading",
+                badge: "📖 Reading Trivia",
+                reading: "Space Trivia: Mars has very thin air and freezing temperatures. If astronauts walk on Mars without a pressurized spacesuit, they won't survive for even a minute.",
+                question: "Why do astronauts need pressurized spacesuits on Mars?",
+                options: [
+                    "Because without them, they won't survive on Mars.",
+                    "Because Mars is hotter than the Sun.",
+                    "Because spacesuits help them fly like birds.",
+                    "Because Mars has deep oceans."
+                ],
+                answer: "Because without them, they won't survive on Mars."
+            },
+
+            // --- 10 AFFIRMATIVE FIRST CONDITIONAL ---
+            {
+                cat: "affirmative",
+                badge: "➕ Affirmative (1st Conditional)",
+                question: "Complete the affirmative sentence:\n'If you ___ hard for the test, you will get an A+.'",
+                options: ["study", "will study", "studied", "studying"],
+                answer: "study"
+            },
+            {
+                cat: "affirmative",
+                badge: "➕ Affirmative (1st Conditional)",
+                question: "Complete the result clause:\n'If she misses the school bus, she ___ a taxi.'",
+                options: ["will take", "takes", "took", "taking"],
+                answer: "will take"
+            },
+            {
+                cat: "affirmative",
+                badge: "➕ Affirmative (1st Conditional)",
+                question: "Choose the correct verb form:\n'If it ___ sunny tomorrow, we will go to the beach.'",
+                options: ["is", "will be", "are", "was"],
+                answer: "is"
+            },
+            {
+                cat: "affirmative",
+                badge: "➕ Affirmative (1st Conditional)",
+                question: "Complete the sentence:\n'If my dad ___ early from work, we will play board games.'",
+                options: ["arrives", "arrive", "will arrive", "arrived"],
+                answer: "arrives"
+            },
+            {
+                cat: "affirmative",
+                badge: "➕ Affirmative (1st Conditional)",
+                question: "Complete the sentence:\n'I ___ you as soon as I arrive at the airport.'",
+                options: ["will call", "call", "called", "am call"],
+                answer: "will call"
+            },
+            {
+                cat: "affirmative",
+                badge: "➕ Affirmative (1st Conditional)",
+                question: "Choose the right option:\n'If they ___ the championship, the whole school will celebrate!'",
+                options: ["win", "will win", "wins", "won"],
+                answer: "win"
+            },
+            {
+                cat: "affirmative",
+                badge: "➕ Affirmative (1st Conditional)",
+                question: "Complete the sentence:\n'If you mix blue and yellow paint, you ___ green.'",
+                options: ["will get", "got", "getting", "gets"],
+                answer: "will get"
+            },
+            {
+                cat: "affirmative",
+                badge: "➕ Affirmative (1st Conditional)",
+                question: "Complete the sentence:\n'She will buy a new laptop if she ___ enough money.'",
+                options: ["saves", "save", "will save", "saved"],
+                answer: "saves"
+            },
+            {
+                cat: "affirmative",
+                badge: "➕ Affirmative (1st Conditional)",
+                question: "Complete the sentence:\n'If we ___ now, we will arrive before the movie starts.'",
+                options: ["leave", "will leave", "left", "leaves"],
+                answer: "leave"
+            },
+            {
+                cat: "affirmative",
+                badge: "➕ Affirmative (1st Conditional)",
+                question: "Complete the sentence:\n'If he ___ his vegetables, his mom will give him dessert.'",
+                options: ["eats", "eat", "will eat", "ate"],
+                answer: "eats"
+            },
+
+            // --- 10 NEGATIVE FIRST CONDITIONAL ---
+            {
+                cat: "negative",
+                badge: "➖ Negative (1st Conditional)",
+                question: "Complete the negative sentence:\n'If you ___ hurry up, you will miss the train!'",
+                options: ["don't", "doesn't", "won't", "not"],
+                answer: "don't"
+            },
+            {
+                cat: "negative",
+                badge: "➖ Negative (1st Conditional)",
+                question: "Complete the negative result:\n'If it rains this afternoon, we ___ play soccer outside.'",
+                options: ["won't", "don't", "doesn't", "aren't"],
+                answer: "won't"
+            },
+            {
+                cat: "negative",
+                badge: "➖ Negative (1st Conditional)",
+                question: "Choose the correct negative verb:\n'If she ___ water the flowers, they will die.'",
+                options: ["doesn't", "don't", "won't", "isn't"],
+                answer: "doesn't"
+            },
+            {
+                cat: "negative",
+                badge: "➖ Negative (1st Conditional)",
+                question: "Complete the sentence:\n'You ___ pass the exam if you don't review your notes.'",
+                options: ["won't", "don't", "didn't", "haven't"],
+                answer: "won't"
+            },
+            {
+                cat: "negative",
+                badge: "➖ Negative (1st Conditional)",
+                question: "Complete the sentence:\n'If he ___ apologize, Maria won't forgive him.'",
+                options: ["doesn't", "don't", "won't", "not"],
+                answer: "doesn't"
+            },
+            {
+                cat: "negative",
+                badge: "➖ Negative (1st Conditional)",
+                question: "Complete the sentence:\n'If we ___ protect endangered animals, many species will disappear.'",
+                options: ["don't", "doesn't", "won't", "aren't"],
+                answer: "don't"
+            },
+            {
+                cat: "negative",
+                badge: "➖ Negative (1st Conditional)",
+                question: "Complete the negative result:\n'They ___ go to the concert if the tickets are too expensive.'",
+                options: ["won't", "don't", "doesn't", "didn't"],
+                answer: "won't"
+            },
+            {
+                cat: "negative",
+                badge: "➖ Negative (1st Conditional)",
+                question: "Complete the sentence:\n'If you don't charge your phone, it ___ work tomorrow.'",
+                options: ["won't", "doesn't", "don't", "isn't"],
+                answer: "won't"
+            },
+            {
+                cat: "negative",
+                badge: "➖ Negative (1st Conditional)",
+                question: "Choose the correct option:\n'I ___ tell anyone your secret if you trust me.'",
+                options: ["won't", "don't", "am not", "doesn't"],
+                answer: "won't"
+            },
+            {
+                cat: "negative",
+                badge: "➖ Negative (1st Conditional)",
+                question: "Complete the sentence:\n'If the bus ___ arrive in 5 minutes, we will walk to school.'",
+                options: ["doesn't", "don't", "won't", "isn't"],
+                answer: "doesn't"
+            },
+
+            // --- 10 INTERROGATIVE FIRST CONDITIONAL ---
+            {
+                cat: "question",
+                badge: "❓ Question (1st Conditional)",
+                question: "Complete the question:\n'What ___ you do if it rains during the camping trip?'",
+                options: ["will", "do", "are", "did"],
+                answer: "will"
+            },
+            {
+                cat: "question",
+                badge: "❓ Question (1st Conditional)",
+                question: "Complete the question:\n'___ she come to the party if we invite her?'",
+                options: ["Will", "Does", "Is", "Do"],
+                answer: "Will"
+            },
+            {
+                cat: "question",
+                badge: "❓ Question (1st Conditional)",
+                question: "Choose the correct verb form:\n'Where will they go if the museum ___ closed?'",
+                options: ["is", "will be", "are", "was"],
+                answer: "is"
+            },
+            {
+                cat: "question",
+                badge: "❓ Question (1st Conditional)",
+                question: "Complete the question:\n'If you pass all your exams, what ___ your parents give you?'",
+                options: ["will", "do", "are", "have"],
+                answer: "will"
+            },
+            {
+                cat: "question",
+                badge: "❓ Question (1st Conditional)",
+                question: "Complete the question:\n'___ you help me with my homework if I finish early?'",
+                options: ["Will", "Do", "Are", "Did"],
+                answer: "Will"
+            },
+            {
+                cat: "question",
+                badge: "❓ Question (1st Conditional)",
+                question: "Choose the right verb:\n'How will she get home if she ___ the last bus?'",
+                options: ["misses", "miss", "will miss", "missed"],
+                answer: "misses"
+            },
+            {
+                cat: "question",
+                badge: "❓ Question (1st Conditional)",
+                question: "Complete the question:\n'What will happen if we ___ water the plants?'",
+                options: ["don't", "doesn't", "won't", "aren't"],
+                answer: "don't"
+            },
+            {
+                cat: "question",
+                badge: "❓ Question (1st Conditional)",
+                question: "Complete the question:\n'Will they cancel the flight if the storm ___ worse?'",
+                options: ["gets", "get", "will get", "got"],
+                answer: "gets"
+            },
+            {
+                cat: "question",
+                badge: "❓ Question (1st Conditional)",
+                question: "Complete the question:\n'Who ___ you call if you need help with your project?'",
+                options: ["will", "do", "are", "did"],
+                answer: "will"
+            },
+            {
+                cat: "question",
+                badge: "❓ Question (1st Conditional)",
+                question: "Complete the question:\n'If we buy two tickets, ___ we get a discount?'",
+                options: ["will", "do", "are", "did"],
+                answer: "will"
+            }
+        ];
+
+        // Tile Categories Mapping (Tiles 1 to 24)
+        const tileCategories = {
+            1: "affirmative", 2: "reading", 3: "negative", 4: "question",
+            5: "affirmative", 6: "reading", 7: "negative", 8: "question",
+            9: "affirmative", 10: "reading", 11: "negative", 12: "question",
+            13: "affirmative", 14: "reading", 15: "negative", 16: "question",
+            17: "affirmative", 18: "reading", 19: "negative", 20: "question",
+            21: "affirmative", 22: "reading", 23: "negative", 24: "question"
+        };
+
+        // ==================== GAME STATE (MULTIPLAYER) ====================
+        const defaultAvatars = ["🚀", "🏎️", "🦄", "🤖"];
+        const playerColors = [
+            { border: "border-amber-400", bg: "bg-amber-50", badge: "bg-amber-400 text-indigo-950" },
+            { border: "border-cyan-400", bg: "bg-cyan-50", badge: "bg-cyan-400 text-indigo-950" },
+            { border: "border-pink-400", bg: "bg-pink-50", badge: "bg-pink-400 text-white" },
+            { border: "border-emerald-400", bg: "bg-emerald-50", badge: "bg-emerald-400 text-indigo-950" }
+        ];
+
+        let numPlayers = 1;
+        let players = [];
+        let currentTurnIdx = 0;
+        let previousTile = 0;
+        let pendingTile = 0;
+        let activeQuestion = null;
+        let usedQuestionIndices = new Set();
+
+        function setPlayerCount(count) {
+            numPlayers = count;
+            document.querySelectorAll('.pcount-btn').forEach((btn, idx) => {
+                if (idx + 1 === count) {
+                    btn.className = "pcount-btn px-3.5 py-1.5 rounded-xl text-xs font-extrabold border-2 border-indigo-600 bg-indigo-600 text-white shadow";
+                } else {
+                    btn.className = "pcount-btn px-3.5 py-1.5 rounded-xl text-xs font-extrabold border-2 border-indigo-200 bg-white text-indigo-900 hover:border-indigo-400";
+                }
+            });
+            renderPlayerSetupInputs();
+        }
+
+        function renderPlayerSetupInputs() {
+            const grid = document.getElementById('players-setup-grid');
+            grid.innerHTML = '';
+
+            for (let i = 0; i < numPlayers; i++) {
+                const avatar = defaultAvatars[i];
+                const div = document.createElement('div');
+                div.className = "bg-white p-2.5 rounded-xl border border-indigo-200 flex items-center space-x-2 shadow-sm";
+                div.innerHTML = `
+                    <span class="text-2xl">${avatar}</span>
+                    <input type="text" id="p-name-${i}" value="Player ${i + 1}" placeholder="Name Player ${i + 1}" class="w-full text-xs sm:text-sm font-bold text-gray-800 focus:outline-none border-b border-gray-200 focus:border-indigo-500 py-1">
+                `;
+                grid.appendChild(div);
+            }
+        }
+
+        // Initialize setup inputs on load
+        window.addEventListener('DOMContentLoaded', () => {
+            setPlayerCount(1);
+        });
+
+        function startRace() {
+            players = [];
+            for (let i = 0; i < numPlayers; i++) {
+                const nameInput = document.getElementById(`p-name-${i}`);
+                const cleanName = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : `Player ${i + 1}`;
+                players.push({
+                    id: i,
+                    name: cleanName,
+                    avatar: defaultAvatars[i],
+                    tile: 0,
+                    correct: 0,
+                    rolls: 0,
+                    style: playerColors[i]
+                });
+            }
+
+            currentTurnIdx = 0;
+            usedQuestionIndices.clear();
+
+            document.getElementById('screen-start').classList.add('hidden');
+            const boardScreen = document.getElementById('screen-board');
+            boardScreen.classList.remove('hidden');
+            boardScreen.classList.add('flex');
+            document.getElementById('hud-bar').classList.remove('hidden');
+
+            updateTurnBanner();
+            updateHUD();
+            renderBoard();
+        }
+
+        function updateHUD() {
+            const activeP = players[currentTurnIdx];
+            document.getElementById('hud-turn-name').textContent = `${activeP.avatar} ${activeP.name}`;
+            const maxTile = Math.max(...players.map(p => p.tile));
+            document.getElementById('hud-leader').textContent = maxTile;
+
+            // Update Top Scoreboard Strip
+            const sb = document.getElementById('players-scoreboard');
+            sb.innerHTML = '';
+            players.forEach((p, idx) => {
+                const isTurn = (idx === currentTurnIdx);
+                const card = document.createElement('div');
+                card.className = `p-2.5 rounded-2xl border-2 transition flex items-center justify-between ${
+                    isTurn 
+                        ? `${p.style.border} ${p.style.bg} shadow-md scale-[1.02]` 
+                        : 'border-gray-200 bg-white opacity-75'
+                }`;
+                card.innerHTML = `
+                    <div class="flex items-center space-x-2 truncate">
+                        <span class="text-xl sm:text-2xl">${p.avatar}</span>
+                        <div class="truncate">
+                            <div class="text-xs font-extrabold text-gray-900 truncate">${p.name}</div>
+                            <div class="text-[10px] font-bold text-gray-500">✅ ${p.correct}/${p.rolls}</div>
+                        </div>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-lg text-xs font-extrabold ${p.style.badge}">
+                        #${p.tile}
+                    </span>
+                `;
+                sb.appendChild(card);
+            });
+        }
+
+        function updateTurnBanner() {
+            const activeP = players[currentTurnIdx];
+            document.getElementById('turn-status').textContent = `${activeP.avatar} ${activeP.name}'s Turn!`;
+            document.getElementById('turn-substatus').textContent = `Currently on Tile #${activeP.tile}. Roll the dice to advance!`;
+        }
+
+        function renderBoard() {
+            const boardEl = document.getElementById('race-board');
+            boardEl.innerHTML = '';
+
+            for (let i = 0; i <= 24; i++) {
+                const cat = tileCategories[i];
+                const tile = document.createElement('div');
+                
+                let bgClass = "bg-slate-800 border-slate-600 text-white";
+                let icon = "";
+                let label = `#${i}`;
+
+                if (i === 0) {
+                    bgClass = "bg-indigo-700 border-indigo-400 text-white";
+                    label = "START";
+                    icon = "🚦";
+                } else if (i === 24) {
+                    bgClass = "bg-gradient-to-br from-amber-400 to-yellow-500 border-white text-indigo-950 font-extrabold";
+                    label = "FINISH";
+                    icon = "🏁";
+                } else if (cat === "reading") {
+                    bgClass = "bg-blue-900/90 border-blue-400 text-blue-100";
+                    icon = "📖";
+                } else if (cat === "affirmative") {
+                    bgClass = "bg-emerald-900/90 border-emerald-400 text-emerald-100";
+                    icon = "➕";
+                } else if (cat === "negative") {
+                    bgClass = "bg-rose-900/90 border-rose-400 text-rose-100";
+                    icon = "➖";
+                } else if (cat === "question") {
+                    bgClass = "bg-amber-900/90 border-amber-400 text-amber-100";
+                    icon = "❓";
+                }
+
+                // Find all players currently on tile i
+                const playersHere = players.filter(p => p.tile === i);
+                const hasActivePlayer = players[currentTurnIdx].tile === i;
+
+                tile.className = `board-tile relative h-16 sm:h-20 rounded-2xl border-2 p-1.5 flex flex-col items-center justify-between ${bgClass} ${
+                    hasActivePlayer ? 'ring-4 ring-yellow-300 scale-105 z-10 shadow-xl' : 'opacity-90'
+                }`;
+
+                const tokensHTML = playersHere.map(p => `<span class="text-lg sm:text-2xl player-token">${p.avatar}</span>`).join('');
+
+                tile.innerHTML = `
+                    <div class="w-full flex justify-between items-center text-[10px] font-extrabold opacity-80 px-1">
+                        <span>${label}</span>
+                        <span>${icon}</span>
+                    </div>
+                    <div class="flex flex-wrap justify-center items-center gap-0.5 leading-none">
+                        ${tokensHTML}
+                    </div>
+                `;
+                boardEl.appendChild(tile);
+            }
+        }
+
+        function rollDice() {
+            const rollBtn = document.getElementById('roll-btn');
+            const diceBox = document.getElementById('dice-box');
+            const statusEl = document.getElementById('turn-status');
+            const subStatusEl = document.getElementById('turn-substatus');
+            const activeP = players[currentTurnIdx];
+
+            rollBtn.disabled = true;
+            rollBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            diceBox.classList.add('rolling');
+            statusEl.textContent = `${activeP.avatar} ${activeP.name} is rolling...`;
+            subStatusEl.textContent = "Good luck!";
+
+            const diceFaces = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+            let ticks = 0;
+
+            const interval = setInterval(() => {
+                playSFX('dice');
+                const randFace = diceFaces[Math.floor(Math.random() * 6)];
+                diceBox.textContent = randFace;
+                ticks++;
+
+                if (ticks >= 10) {
+                    clearInterval(interval);
+                    diceBox.classList.remove('rolling');
+
+                    const rolledNumber = Math.floor(Math.random() * 6) + 1;
+                    diceBox.textContent = diceFaces[rolledNumber - 1];
+                    activeP.rolls++;
+
+                    previousTile = activeP.tile;
+                    pendingTile = Math.min(24, activeP.tile + rolledNumber);
+                    activeP.tile = pendingTile;
+                    updateHUD();
+                    renderBoard();
+
+                    statusEl.textContent = `${activeP.name} rolled a ${rolledNumber}!`;
+                    subStatusEl.textContent = `Answer Tile #${pendingTile}'s challenge to stay here!`;
+
+                    setTimeout(() => {
+                        openChallengeForTile(pendingTile);
+                    }, 750);
+                }
+            }, 65);
+        }
+
+        function shuffleArray(arr) {
+            const copy = [...arr];
+            for (let i = copy.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [copy[i], copy[j]] = [copy[j], copy[i]];
+            }
+            return copy;
+        }
+
+        function openChallengeForTile(tileNum) {
+            const category = tileCategories[tileNum] || "affirmative";
+            const activeP = players[currentTurnIdx];
+
+            // Filter unused questions matching the tile category
+            let pool = questionBank
+                .map((q, idx) => ({ ...q, originalIdx: idx }))
+                .filter(q => q.cat === category && !usedQuestionIndices.has(q.originalIdx));
+
+            // If all questions in that category were used, reset pool for that category
+            if (pool.length === 0) {
+                pool = questionBank
+                    .map((q, idx) => ({ ...q, originalIdx: idx }))
+                    .filter(q => q.cat === category);
+            }
+
+            const chosen = pool[Math.floor(Math.random() * pool.length)];
+            usedQuestionIndices.add(chosen.originalIdx);
+            activeQuestion = chosen;
+
+            // Populate Modal UI
+            const modal = document.getElementById('challenge-modal');
+            const header = document.getElementById('modal-header');
+            const badge = document.getElementById('modal-category-badge');
+            const tileInfo = document.getElementById('modal-tile-info');
+            const readingBox = document.getElementById('modal-reading-box');
+            const readingText = document.getElementById('modal-reading-text');
+            const questionEl = document.getElementById('modal-question');
+            const optionsEl = document.getElementById('modal-options');
+            const feedbackEl = document.getElementById('modal-feedback');
+            const continueWrap = document.getElementById('modal-continue-wrap');
+
+            // Style header by category
+            if (category === "reading") header.className = "bg-blue-700 text-white p-4 flex items-center justify-between";
+            else if (category === "affirmative") header.className = "bg-emerald-700 text-white p-4 flex items-center justify-between";
+            else if (category === "negative") header.className = "bg-rose-700 text-white p-4 flex items-center justify-between";
+            else header.className = "bg-amber-600 text-white p-4 flex items-center justify-between";
+
+            badge.textContent = `${activeP.avatar} ${activeP.name} • ${chosen.badge}`;
+            tileInfo.textContent = `Target: Tile #${tileNum} / 24`;
+
+            if (chosen.reading) {
+                readingBox.classList.remove('hidden');
+                readingText.textContent = chosen.reading;
+            } else {
+                readingBox.classList.add('hidden');
+            }
+
+            questionEl.textContent = chosen.question;
+            feedbackEl.classList.add('hidden');
+            continueWrap.classList.add('hidden');
+
+            optionsEl.innerHTML = '';
+            const shuffledOptions = shuffleArray(chosen.options);
+            shuffledOptions.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 font-semibold text-xs sm:text-sm text-gray-800 transition";
+                btn.textContent = opt;
+                btn.onclick = () => evaluateChallengeAnswer(opt, btn);
+                optionsEl.appendChild(btn);
+            });
+
+            modal.classList.remove('hidden');
+        }
+
+        function evaluateChallengeAnswer(selectedOpt, clickedBtn) {
+            const optionsEl = document.getElementById('modal-options');
+            const feedbackEl = document.getElementById('modal-feedback');
+            const continueWrap = document.getElementById('modal-continue-wrap');
+            const activeP = players[currentTurnIdx];
+
+            // Disable all option buttons
+            Array.from(optionsEl.children).forEach(b => {
+                b.disabled = true;
+                if (b.textContent === activeQuestion.answer) {
+                    b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 border-green-500 bg-green-100 font-bold text-xs sm:text-sm text-green-900";
+                }
+            });
+
+            const isCorrect = (selectedOpt === activeQuestion.answer);
+            feedbackEl.classList.remove('hidden');
+
+            if (isCorrect) {
+                playSFX('success');
+                activeP.correct++;
+                feedbackEl.className = "mt-4 p-3.5 rounded-2xl text-center text-xs sm:text-sm font-bold bg-green-100 text-green-900 border-2 border-green-400";
+                feedbackEl.innerHTML = `🎉 <b>Correct, ${activeP.name}!</b> You stay on <b>Tile #${pendingTile}</b>!`;
+            } else {
+                playSFX('error');
+                clickedBtn.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 border-red-500 bg-red-100 font-bold text-xs sm:text-sm text-red-900";
+                // Move player back to previousTile!
+                activeP.tile = previousTile;
+                feedbackEl.className = "mt-4 p-3.5 rounded-2xl text-center text-xs sm:text-sm font-bold bg-red-100 text-red-900 border-2 border-red-400";
+                feedbackEl.innerHTML = `❌ <b>Incorrect!</b> The correct answer was: <i>"${activeQuestion.answer}"</i>.<br>${activeP.name} moves back to <b>Tile #${previousTile}</b>.`;
+            }
+
+            updateHUD();
+            renderBoard();
+            continueWrap.classList.remove('hidden');
+        }
+
+        function closeChallengeModal() {
+            document.getElementById('challenge-modal').classList.add('hidden');
+            const activeP = players[currentTurnIdx];
+
+            // Check Victory Condition for current player
+            if (activeP.tile >= 24) {
+                showVictory(activeP);
+                return;
+            }
+
+            // Advance turn to next player (alternating turns)
+            currentTurnIdx = (currentTurnIdx + 1) % players.length;
+
+            // Re-enable dice button for next player's roll
+            const rollBtn = document.getElementById('roll-btn');
+            rollBtn.disabled = false;
+            rollBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            updateHUD();
+            renderBoard();
+            updateTurnBanner();
+        }
+
+        function showVictory(winner) {
+            document.getElementById('screen-board').classList.add('hidden');
+            document.getElementById('screen-board').classList.remove('flex');
+            document.getElementById('hud-bar').classList.add('hidden');
+
+            const vicScreen = document.getElementById('screen-victory');
+            vicScreen.classList.remove('hidden');
+            vicScreen.classList.add('flex');
+
+            document.getElementById('vic-winner-title').textContent = `${winner.avatar} ${winner.name.toUpperCase()} WINS!`;
+
+            // Sort players by tile reached descending
+            const sorted = [...players].sort((a, b) => b.tile - a.tile || b.correct - a.correct);
+            const standingsEl = document.getElementById('vic-standings');
+            standingsEl.innerHTML = '';
+
+            sorted.forEach((p, rank) => {
+                const acc = p.rolls > 0 ? Math.round((p.correct / p.rolls) * 100) : 100;
+                const medal = rank === 0 ? "🥇" : rank === 1 ? "🥈" : rank === 2 ? "🥉" : "🏅";
+                const row = document.createElement('div');
+                row.className = `p-3.5 rounded-2xl border-2 flex items-center justify-between ${
+                    rank === 0 ? 'bg-amber-50 border-amber-400 shadow-md' : 'bg-gray-50 border-gray-200'
+                }`;
+                row.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">${medal}</span>
+                        <span class="text-2xl">${p.avatar}</span>
+                        <div>
+                            <div class="font-extrabold text-gray-900 text-sm">${p.name}</div>
+                            <div class="text-xs text-gray-500">Tile #${p.tile}/24 • ${p.correct}/${p.rolls} correct (${acc}%)</div>
+                        </div>
+                    </div>
+                    <span class="font-extrabold text-indigo-900 text-sm">${rank === 0 ? 'CHAMPION' : `#${rank + 1}`}</span>
+                `;
+                standingsEl.appendChild(row);
+            });
+
+            launchConfetti();
+        }
+
+        function sendRaceWhatsApp() {
+            const sorted = [...players].sort((a, b) => b.tile - a.tile || b.correct - a.correct);
+            const phone = '+522211620366';
+
+            const lines = sorted.map((p, i) => {
+                const acc = p.rolls > 0 ? Math.round((p.correct / p.rolls) * 100) : 100;
+                return `${i + 1}. ${p.avatar} *${p.name}*: Casilla #${p.tile}/24 (${p.correct}/${p.rolls} aciertos - ${acc}%)`;
+            }).join('\n');
+
+            const msg = encodeURIComponent(
+                `🎲 *Edukinglish Conditional Race - Resultados de Carrera*\n\n` +
+                `🏆 *Ganador:* ${sorted[0].avatar} ${sorted[0].name}\n\n` +
+                `📊 *Tabla de Posiciones:*\n${lines}`
+            );
+            window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+        }
+
+        function launchConfetti() {
+            const canvas = document.getElementById('confetti-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const pieces = [];
+            const colors = ['#FBBF24', '#34D399', '#60A5FA', '#F43F5E', '#A78BFA'];
+            for (let i = 0; i < 90; i++) {
+                pieces.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    size: Math.random() * 8 + 4,
+                    vy: Math.random() * 3 + 2,
+                    vx: Math.random() * 2 - 1
+                });
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                pieces.forEach(p => {
+                    p.y += p.vy;
+                    p.x += p.vx;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                if (pieces.some(p => p.y < canvas.height)) {
+                    requestAnimationFrame(draw);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+            draw();
+        }
+    </script>
+</body>
+</html>
